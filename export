@@ -1,0 +1,62 @@
+#!/bin/sh
+# Save the running Live's reports into docs/<Live version>/ and rebuild
+# docs/index.html, the list of versions. GitHub Pages serves docs/.
+# macOS only. Usage: ./export
+set -e
+cd "$(dirname "$0")"
+url=http://127.0.0.1:31415
+
+api=$(mktemp)
+trap 'rm -f "$api"' EXIT
+curl -fsS -o "$api" "$url/api.json" || {
+  echo "Can't reach the probe. Is Live running with the LiveApiProbe control surface picked?" >&2
+  exit 1
+}
+
+version=$(sed -n 's/^  "version": "\(.*\)",\{0,1\}$/\1/p' "$api")
+case "$version" in
+  "" | *[!A-Za-z0-9._-]*)
+    echo "Unexpected Live version in api.json: '$version'" >&2
+    exit 1
+    ;;
+esac
+
+dir="docs/$version"
+mkdir -p "$dir"
+cat "$api" > "$dir/api.json"
+curl -fsS -o "$dir/index.html" "$url/"
+curl -fsS -o "$dir/python-vs-max.txt" "$url/python-vs-max.txt"
+touch docs/.nojekyll
+
+{
+  cat <<'HTML'
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="color-scheme" content="light dark">
+<title>Ableton Live API by version</title>
+<style>
+body { max-width: 40em; margin: 3em auto; padding: 0 1em;
+  font: 16px/1.6 -apple-system, "Segoe UI", Helvetica, Arial, sans-serif; }
+li { margin: .3em 0; }
+</style>
+</head>
+<body>
+<h1>Ableton Live API by version</h1>
+<p>Live's Python API and what Max for Live can reach of it, read from a
+running Live by
+<a href="https://github.com/adamjmurray/live-api-probe">Live API Probe</a>.
+Not affiliated with Ableton.</p>
+<ul>
+HTML
+  for v in $(ls docs | sort -rV); do
+    if [ -f "docs/$v/index.html" ]; then
+      printf '<li><a href="%s/">Live %s</a></li>\n' "$v" "$v"
+    fi
+  done
+  printf '</ul>\n</body>\n</html>\n'
+} > docs/index.html
+
+echo "Saved Live $version to $dir and rebuilt docs/index.html"

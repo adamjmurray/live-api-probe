@@ -1,0 +1,55 @@
+# Python members Max can't reach (Live 12.4.16)
+
+## Application.Application
+browser, canonical_parent, get_build_id, get_variant, has_option, number_of_push_apps_running, show_message, show_on_the_fly_message, unavailable_features
+
+## Chain.Chain
+duplicate_device
+
+## Clip.Clip
+automation_envelope, automation_envelopes, beat_to_sample_time, create_automation_envelope, is_session_clip, is_take_lane_clip, note_number_to_name, sample_to_beat_time, seconds_to_sample_time
+
+## DeviceParameter.DeviceParameter
+begin_gesture, end_gesture, short_value_items
+
+## DrumChain.DrumChain
+duplicate_device
+
+## MaxDevice.MaxDevice
+get_value_item_icons
+
+## PluginDevice.PluginDevice
+get_parameter_names
+
+## RackDevice.RackDevice
+macros_mapped
+
+## Sample.Sample
+beat_to_sample_time, sample_to_beat_time
+
+## ShifterDevice.ShifterDevice
+pitch_mode_list
+
+## SimplerDevice.SimplerDevice
+note_pitch_bend_range, pitch_bend_range
+
+## SimplerDevice.SimplerDevice.View
+sample_end, sample_env_fade_in, sample_env_fade_out, sample_loop_end, sample_loop_fade, sample_loop_start, sample_start
+
+## Song.Song
+begin_undo_step, canonical_parent, end_undo_step, get_data, set_data, sync_parameter_changes
+
+## SpectralResonatorDevice.SpectralResonatorDevice
+frequency_dial_mode_list, midi_gate_list, mod_mode_list, mono_poly_list, pitch_mode_list
+
+## Track.Track
+duplicate_device, get_data, set_data
+
+## TuningSystem.TuningSystem
+number_of_notes_in_pseudo_octave
+
+## Classes Max can't reach at all
+Application.ControlDescription, Application.ControlDescriptionVector, Application.ControlSurfaceProxy, Application.UnavailableFeatureVector, Base.FloatVector, Base.IntU64Vector, Base.IntVector, Base.LimitationError, Base.ObjectVector, Base.StringVector, Base.Text, Base.Timer, Base.Vector, Browser.Browser, Browser.BrowserItem, Browser.BrowserItemVector, CcControlDevice.CcControlDevice, Clip.MidiNote, Clip.MidiNoteVector, Clip.WarpMarker, Clip.WarpMarkerVector, Device.ATimeableValueVector, Envelope.Envelope, Envelope.EnvelopeEvent, Envelope.EnvelopeEventControlCoefficients, Envelope.EnvelopeEventVector, Licensing.ProgressDialog, Licensing.PythonLicensingBridge, Licensing.StartupDialogServes as an entry point for the user to authorize Live on first launch., Licensing.UnlockStatus, Listener.ListenerHandle, Listener.ListenerVector, MidiMap.CCFeedbackRule, MidiMap.NoteFeedbackRule, MidiMap.PitchBendFeedbackRule, Song.BeatTime, Song.SmptTime, Track.RoutingChannel, Track.RoutingChannelVector, Track.RoutingType, Track.RoutingTypeVector, TuningSystem.PitchClassAndOctave, TuningSystem.ReferencePitch
+
+## Module functions (Max can't call any)
+Application.combine_apcs, Application.encrypt_challenge, Application.encrypt_challenge2, Application.get_application, Application.get_random_int, Base.get_text, Base.log, Base.subst_args, Conversions.audio_to_midi_clip, Conversions.create_drum_rack_from_audio_clip, Conversions.create_midi_track_from_drum_pad, Conversions.create_midi_track_with_simpler, Conversions.is_convertible_to_midi, Conversions.move_devices_on_track_to_new_drum_rack_pad, Conversions.sliced_simpler_to_drum_rack, Licensing.authorization_clock_days_ahead, Licensing.get_authorization_page_url, Licensing.get_purchase_live_url, Licensing.get_services_url, Licensing.get_unlock_dir, Licensing.launch_web_browser, MidiMap.forward_midi_cc, MidiMap.forward_midi_note, MidiMap.forward_midi_pitchbend, MidiMap.map_midi_cc, MidiMap.map_midi_cc_with_feedback_map, MidiMap.map_midi_note, MidiMap.map_midi_note_with_feedback_map, MidiMap.map_midi_pitchbend, MidiMap.map_midi_pitchbend_with_feedback_map, MidiMap.send_feedback_for_parameter, SimplerDevice.get_available_voice_numbers, Song.get_all_scales_ordered
