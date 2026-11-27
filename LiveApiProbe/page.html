@@ -1,0 +1,314 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Live __VERSION__ API</title>
+<script>
+// Before the page draws: the saved choice, else the system's setting.
+(function () {
+  let theme = null;
+  try { theme = localStorage.getItem('theme'); } catch (e) { /* storage is off */ }
+  if (theme !== 'dark' && theme !== 'light') {
+    theme = matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
+  }
+  document.documentElement.dataset.theme = theme;
+})();
+</script>
+<style>
+:root {
+  color-scheme: light;
+  --bg: #fff; --fg: #1c1e21; --muted: #68707a; --line: #e2e5e9; --side: #f6f7f9;
+  --accent: #0b62d6; --code: #f1f3f5; --warn-bg: #fff1d6; --warn-fg: #7a4b00;
+  --tag-bg: #e8eef7; --tag-fg: #2c4a7c;
+}
+:root[data-theme="dark"] {
+  color-scheme: dark;
+  --bg: #16181c; --fg: #e3e5e8; --muted: #9099a5; --line: #2c3037; --side: #1c1f24;
+  --accent: #6cb0ff; --code: #23272e; --warn-bg: #4a3608; --warn-fg: #ffd68a;
+  --tag-bg: #26344a; --tag-fg: #b5cdf2;
+}
+* { box-sizing: border-box; }
+body { margin: 0; font: 15px/1.5 -apple-system, "Segoe UI", Helvetica, Arial, sans-serif;
+  background: var(--bg); color: var(--fg); }
+a { color: var(--accent); text-decoration: none; }
+a:hover { text-decoration: underline; }
+code, .sig, .cpp { font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; font-size: 13px; }
+header { position: sticky; top: 0; z-index: 1; display: flex; flex-wrap: wrap; gap: 12px;
+  align-items: center; padding: 10px 16px; background: var(--bg); border-bottom: 1px solid var(--line); }
+header .home { font-size: 16px; font-weight: 600; color: var(--fg); }
+header input[type=search] { flex: 1; min-width: 160px; max-width: 420px; padding: 6px 10px;
+  font: inherit; color: inherit; background: var(--code); border: 1px solid var(--line); border-radius: 6px; }
+header select, header button { padding: 6px 8px; font: inherit; color: inherit; background: var(--code);
+  border: 1px solid var(--line); border-radius: 6px; }
+.layout { display: flex; align-items: flex-start; }
+nav { position: sticky; top: 53px; width: 250px; flex: none; height: calc(100vh - 53px);
+  overflow-y: auto; padding: 12px 8px 40px 16px; background: var(--side); border-right: 1px solid var(--line); }
+nav a { display: block; padding: 1px 6px; border-radius: 4px; color: var(--fg); }
+nav a.module { margin-top: 10px; font-weight: 600; }
+nav a.item { margin-left: 10px; color: var(--muted); }
+nav a.current { background: var(--tag-bg); color: var(--tag-fg); }
+main { flex: 1; min-width: 0; max-width: 900px; padding: 20px 28px 80px; }
+h1 { margin: 0 0 2px; font-size: 26px; }
+h2 { margin: 28px 0 6px; padding-bottom: 4px; font-size: 13px; letter-spacing: .06em;
+  text-transform: uppercase; color: var(--muted); border-bottom: 1px solid var(--line); }
+.path { color: var(--muted); }
+.note { display: inline-block; margin: 10px 0 0; padding: 4px 10px; border-radius: 6px;
+  background: var(--warn-bg); color: var(--warn-fg); }
+.member { padding: 9px 0; border-bottom: 1px solid var(--line); }
+.member .name { font-weight: 600; font-size: 14px; }
+.tag { display: inline-block; margin-left: 6px; padding: 0 7px; border-radius: 9px;
+  font-size: 11.5px; line-height: 18px; background: var(--tag-bg); color: var(--tag-fg); vertical-align: 1px; }
+.tag.py { background: var(--warn-bg); color: var(--warn-fg); }
+.sig { margin-top: 3px; overflow-wrap: anywhere; }
+.text { margin-top: 3px; }
+.cpp { margin-top: 3px; color: var(--muted); font-size: 12px; overflow-wrap: anywhere; }
+.where { color: var(--muted); font-size: 13px; }
+table { border-collapse: collapse; }
+td { padding: 2px 24px 2px 0; }
+.empty { color: var(--muted); }
+@media (max-width: 720px) {
+  .layout { display: block; }
+  nav { position: static; width: auto; height: auto; max-height: 40vh; border-right: 0;
+    border-bottom: 1px solid var(--line); }
+  main { padding: 16px; }
+}
+</style>
+</head>
+<body>
+<header>
+  <a class="home" href="#">Live __VERSION__ API</a>
+  <input id="q" type="search" placeholder="Search members, classes and functions" autocomplete="off">
+  <select id="view" aria-label="Which API to show">
+    <option value="all">Python API</option>
+    <option value="max">Max for Live API</option>
+    <option value="py">Only in Python API</option>
+  </select>
+  <button id="theme" type="button"></button>
+</header>
+<div class="layout">
+  <nav id="nav"></nav>
+  <main id="main"></main>
+</div>
+<script id="data" type="application/json">__DATA__</script>
+<script>
+const D = JSON.parse(document.getElementById('data').textContent);
+const $ = (id) => document.getElementById(id);
+const esc = (s) => String(s).replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
+const moduleOf = (path) => path.split('.')[0];
+// "Song.Song" reads as "Song", "Song.Song.View" as "Song.View".
+const title = (path) => {
+  const parts = path.split('.');
+  return (parts.length > 1 && parts[0] === parts[1] ? parts.slice(1) : parts).join('.');
+};
+// The title without its module, for lists under a module heading.
+const short = (path) => {
+  const name = title(path);
+  const prefix = moduleOf(path) + '.';
+  return name.startsWith(prefix) ? name.slice(prefix.length) : name;
+};
+const link = (path, text) => `<a href="#${esc(path)}">${esc(text == null ? title(path) : text)}</a>`;
+
+// Which API the page shows: 'all' (Python), 'max' (what Max for Live can
+// reach) or 'py' (what only Python can reach).
+const view = () => $('view').value;
+const showsMember = (m) => view() === 'all' || (view() === 'max') === m.max;
+const ownMembers = (cls) => cls.members.filter((m) => m.kind !== 'class');
+function showsClass(path) {
+  const cls = D.classes[path];
+  if (view() === 'all') return true;
+  if (view() === 'max') return cls.max;
+  return !cls.max || ownMembers(cls).some((m) => !m.max);
+}
+// Enums and module functions are Python's. Max sees an enum as plain numbers.
+const showsEnums = () => view() === 'all';
+const showsFunctions = () => view() !== 'max';
+const showsPath = (path) => (D.classes[path] ? showsClass(path) : showsEnums());
+
+// Live's help text for a callable is "name(args) -> type : description
+// C++ signature : ...". Split it, and drop the `self` argument of a method.
+function parseDoc(doc, isMethod) {
+  const m = doc.match(/^(\w+\(.*?\)\s*->\s*.+?) :\s*(.*?)\s*C\+\+ signature :\s*(.*)$/);
+  if (!m) return { text: doc };
+  let sig = m[1].replace(/\(\s+/, '(');
+  if (isMethod) sig = sig.replace(/\(\([\w.]+\)arg1\s*(\[?),?\s*/, '($1');
+  sig = sig.replace(/\(([\w.]+)\)(\w+)/g, '$2: $1');
+  return { sig, text: m[2], cpp: m[3] };
+}
+
+// `owner` is the member's class path, shown in search results.
+function memberHtml(member, isMethod, owner) {
+  const parsed = parseDoc(member.doc || '', isMethod);
+  const tags = [
+    member.readonly ? '<span class="tag">read-only</span>' : '',
+    member.observable ? '<span class="tag">has listener</span>' : '',
+    member.max === false && view() === 'all' ? '<span class="tag py">not in Max for Live</span>' : '',
+  ].join('');
+  const where = owner == null ? '' : ` <span class="where">in ${link(owner)}</span>`;
+  return `<div class="member"><code class="name">${esc(member.name)}</code>${tags}${where}`
+    + (parsed.sig ? `<div class="sig">${esc(parsed.sig)}</div>` : '')
+    + (parsed.text ? `<div class="text">${esc(parsed.text)}</div>` : '')
+    + (parsed.cpp ? `<div class="cpp">C++: ${esc(parsed.cpp)}</div>` : '')
+    + '</div>';
+}
+
+const functionHtml = (name, label) =>
+  memberHtml({ name: label, doc: D.functions[name], max: false }, false);
+
+function section(heading, items) {
+  return items.length ? `<h2>${heading}</h2>${items.join('')}` : '';
+}
+
+// The class's page in Cycling '74's Max for Live docs, or null when it
+// shouldn't have one. Their pages are named like "song", "song_view" (a class
+// nested in Song) and "cuepoint" (another class in the Song module).
+function lomUrl(path) {
+  const parts = path.split('.');
+  const outer = D.classes[parts.slice(0, 2).join('.')];
+  if (!D.classes[path].max || (parts.length > 2 && !(outer && outer.max))) return null;
+  return `https://docs.cycling74.com/apiref/lom/${parts.slice(1).join('_').toLowerCase()}/`;
+}
+
+const NOTHING = '<p class="empty">Nothing here in this view.</p>';
+
+function classPage(path) {
+  const cls = D.classes[path];
+  const of = (kind) => cls.members.filter((m) => m.kind === kind && showsMember(m));
+  const nested = cls.members.filter((m) => m.kind === 'class' && showsPath(m.ref));
+  const body = section('Properties', of('property').map((m) => memberHtml(m, true)))
+    + section('Methods', of('method').map((m) => memberHtml(m, true)))
+    + section('Other', of('value').map((m) => memberHtml(m, true)))
+    + section('Nested classes and enums', nested.map((m) => `<div class="member">${link(m.ref, m.name)}</div>`));
+  return `<h1>${esc(title(path))}</h1><code class="path">Live.${esc(path)}</code>`
+    + (cls.max ? '' : '<div><span class="note">Max for Live can\'t reach this class.</span></div>')
+    + (lomUrl(path) ? `<div class="where"><a href="${lomUrl(path)}">Max for Live documentation</a></div>` : '')
+    + (cls.doc ? `<p>${esc(cls.doc)}</p>` : '')
+    + (showsClass(path) && body ? body : NOTHING);
+}
+
+function enumPage(path) {
+  const rows = Object.entries(D.enums[path]).sort((a, b) => a[1] - b[1])
+    .map(([name, value]) => `<tr><td><code>${esc(name)}</code></td><td>${value}</td></tr>`);
+  return `<h1>${esc(title(path))}</h1><code class="path">Live.${esc(path)}</code>`
+    + `<h2>Values</h2><table>${rows.join('')}</table>`;
+}
+
+const inModule = (obj, name) => Object.keys(obj).filter((p) => moduleOf(p) === name).sort();
+
+function modulePage(name) {
+  const links = (paths) => paths.map((p) => `<div class="member">${link(p, short(p))}</div>`);
+  const body = section('Classes', links(inModule(D.classes, name).filter(showsClass)))
+    + (showsEnums() ? section('Enums', links(inModule(D.enums, name))) : '')
+    + (showsFunctions()
+      ? section('Functions', inModule(D.functions, name).map((f) => functionHtml(f, f.split('.').pop())))
+      : '');
+  return `<h1>${esc(name)}</h1><code class="path">Live.${esc(name)}</code>${body || NOTHING}`;
+}
+
+function searchPage(query) {
+  const q = query.toLowerCase();
+  const hits = [];
+  for (const path of Object.keys(D.classes).sort().filter(showsClass)) {
+    if (title(path).toLowerCase().includes(q)) {
+      hits.push(`<div class="member">${link(path)} <span class="where">class</span></div>`);
+    }
+    for (const m of ownMembers(D.classes[path])) {
+      if (showsMember(m) && m.name.toLowerCase().includes(q)) hits.push(memberHtml(m, true, path));
+    }
+  }
+  for (const path of showsEnums() ? Object.keys(D.enums).sort() : []) {
+    if (title(path).toLowerCase().includes(q)) {
+      hits.push(`<div class="member">${link(path)} <span class="where">enum</span></div>`);
+    }
+  }
+  for (const name of showsFunctions() ? Object.keys(D.functions).sort() : []) {
+    if (name.toLowerCase().includes(q)) hits.push(functionHtml(name, name));
+  }
+  return '<h1>Search results</h1>' + (hits.length ? hits.join('') : '<p class="empty">Nothing found.</p>');
+}
+
+// What each module shows in this view. A module with nothing is left out.
+function modules() {
+  const shown = {};
+  const add = (path) => (shown[moduleOf(path)] = shown[moduleOf(path)] || []).push(path);
+  Object.keys(D.classes).filter(showsClass).forEach(add);
+  if (showsEnums()) Object.keys(D.enums).forEach(add);
+  if (showsFunctions()) Object.keys(D.functions).forEach((f) => (shown[moduleOf(f)] = shown[moduleOf(f)] || []));
+  return shown;
+}
+
+function renderNav(current) {
+  const cls = (path, base) => `class="${base}${path === current ? ' current' : ''}"`;
+  const shown = modules();
+  $('nav').innerHTML = Object.keys(shown).sort().map((name) => {
+    const paths = shown[name].sort((a, b) => title(a).localeCompare(title(b)));
+    return `<a ${cls(name, 'module')} href="#${esc(name)}">${esc(name)}</a>`
+      + paths.map((p) => `<a ${cls(p, 'item')} href="#${esc(p)}">${esc(short(p))}</a>`).join('');
+  }).join('');
+  const marked = $('nav').querySelector('.current');
+  if (marked) marked.scrollIntoView({ block: 'nearest' });
+}
+
+const VIEW_NOTES = {
+  all: 'Everything in Live\'s Python API. Members Max for Live can\'t use are marked.',
+  max: 'Only what Max for Live\'s LiveAPI can reach. The names are the same in Max.',
+  py: 'Only what Python can reach and Max for Live can\'t.',
+};
+
+function homePage() {
+  const counts = [`${Object.keys(D.classes).filter(showsClass).length} classes`];
+  if (showsEnums()) counts.push(`${Object.keys(D.enums).length} enums`);
+  if (showsFunctions()) counts.push(`${Object.keys(D.functions).length} module functions`);
+  // A saved copy of the page has no probe behind it to serve these.
+  const files = location.protocol === 'file:' ? '' : '<h2>Files</h2>'
+    + '<div class="member"><a href="api.json">api.json</a><div class="text">Everything on this page as data. '
+    + 'Save it from two Live versions and diff them to see what changed.</div></div>'
+    + '<div class="member"><a href="python-vs-max.txt">python-vs-max.txt</a>'
+    + '<div class="text">A plain list of what Python can reach and Max for Live can\'t.</div></div>';
+  return `<h1>Live ${esc(D.version)} API</h1><p>${VIEW_NOTES[view()]}</p>`
+    + `<p>${counts.join(', ')}, read from a running Live. `
+    + 'The descriptions and signatures are Live\'s own built-in help text.</p>'
+    + '<p>Pick a class on the left, or search. To keep a copy, save this page: it works on its own.</p>'
+    + files
+    + '<h2>See also</h2><div class="member">'
+    + '<a href="https://docs.cycling74.com/apiref/lom/">Live Object Model</a>'
+    + '<div class="text">Cycling \'74\'s documentation of the Max for Live API. '
+    + 'It can describe a newer Live than yours.</div></div>';
+}
+
+function render() {
+  const query = $('q').value.trim();
+  const path = decodeURIComponent(location.hash.slice(1));
+  let page;
+  if (query) page = searchPage(query);
+  else if (D.classes[path]) page = classPage(path);
+  else if (D.enums[path]) page = enumPage(path);
+  else if (inModule(D.classes, path).length || inModule(D.enums, path).length || inModule(D.functions, path).length) page = modulePage(path);
+  else page = homePage();
+  $('main').innerHTML = page;
+  renderNav(query ? null : path);
+}
+
+// The button names the theme it switches to.
+function showTheme() {
+  $('theme').textContent = document.documentElement.dataset.theme === 'dark' ? 'Light mode' : 'Dark mode';
+}
+$('theme').addEventListener('click', () => {
+  const theme = document.documentElement.dataset.theme === 'dark' ? 'light' : 'dark';
+  document.documentElement.dataset.theme = theme;
+  try { localStorage.setItem('theme', theme); } catch (e) { /* storage is off */ }
+  showTheme();
+});
+showTheme();
+
+$('q').addEventListener('input', render);
+$('view').addEventListener('change', render);
+addEventListener('hashchange', () => {
+  $('q').value = '';
+  render();
+  scrollTo(0, 0);
+});
+render();
+</script>
+</body>
+</html>
